@@ -41,3 +41,6 @@ rsconnect/
 .DS_store
 .Ds_store
 .Rproj.user
+
+# ignore this file
+arcos-md-baltimore-city-24510-itemized.tsv
