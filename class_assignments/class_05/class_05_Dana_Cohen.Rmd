@@ -175,19 +175,11 @@ buyer_adresses%>%
   # left join matches buyer totals along with buyer addreses that match all buyer total table times.
 buyer_adresses%>%
   left_join(buyer_totals, by = "buyer_dea_no")%>%
-
-
-buyer_totals%>%
-
-
-buyer_totals%>%
-  left_join(buyer_addresses, by = "buyer-dea-no") %>%
-  filter(is.na(buyer_address1))
-  #the join function allows all totals to have addresses where they match. There are zero records returned, that means there are no null addresses.
-buyer_totals%>%
-  anti_join(buyer_addresses, by ="buyer_dea_no")
-#an antijoin checks if there are any buyer addresses that do not match the records.
-
+  filter(is.na(total_pills))
+# A left join will with the filter will use all the addresses and join all matching buyer totals while showing the buyers that don't have transactions in the totals table.
+buyer_addresses %>%
+  anti_join(buyer_totals, by="buyer_dea_no")
+#an antijoin will do something similar and show any buyers that don't have any pills bought in the total table.
 ```
 ## Your own questions
 
