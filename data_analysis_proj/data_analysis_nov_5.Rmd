@@ -1,0 +1,231 @@
+---
+title: "Data_analysis_project"
+author: "Dana Cohen"
+date: "11/4/2019"
+output:
+  html_document:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE, paged.print=TRUE)
+```
+
+## How this works, tasks, turning it in, getting help
+
+* Use Google or search Stack Overflow. Try searching for your error message or translating your problem into basic terms.
+* Check out the excellent [R for Data Science](https://r4ds.had.co.nz/index.html)
+* Take a look at the [Cheatsheets](https://www.rstudio.com/resources/cheatsheets/) and [Tidyverse documentation](https://www.tidyverse.org/).
+  * [RStudio cheatsheet](https://www.rstudio.com/resources/cheatsheets/#ide)
+  * [Readr and Tidyr cheatsheet](https://github.com/rstudio/cheatsheets/raw/master/data-import.pdf) and [Readr documentation](https://readr.tidyverse.org/) and [Tidyr documentation](https://tidyr.tidyverse.org/reference/index.html).
+  * [Dplyr cheatsheet](https://github.com/rstudio/cheatsheets/raw/master/data-transformation.pdf) and [Dplyr documentation](https://dplyr.tidyverse.org/)
+  * [Lubridate cheatsheet](https://rawgit.com/rstudio/cheatsheets/master/lubridate.pdf) and [Lubridate documentation](https://lubridate.tidyverse.org/).
+  * [GitHub desktop help](https://help.github.com/en/desktop/getting-started-with-github-desktop)
+* If you're really stuck, message me on ELMS.
+
+## Load Packages
+
+We're loading three packages today: the Tidyverse, Janitor and a new one, [Lubridate](https://lubridate.tidyverse.org/), which is in the Tidyverse family, but it doesn't load when you load library(tidyverse). So you need to load it separately.
+
+**Task**: In the code block below, load the Tidyverse family of packages, the Janitor package, and the Lubridate package. If you've never loaded lubridate before, you'll need to install it first. You should be good at installing and loading packages at this point. If you have problems, Google it or look at previous labs.
+
+```{r}
+chooseCRANmirror(graphics=FALSE, ind = 1)
+knitr::opts_chunk$set(echo = TRUE)
+#install.packages("lubridate")
+#install.packages("tidyverse")
+#install.packages("janitor")
+#install.packages('arcos')
+#install.packages('ggrepel')
+#install.packages('tidycensus')
+#install.packages('curl')
+# Load Tidyverse and Janitor
+library(janitor)
+library(tidyverse)
+library(lubridate)
+library(arcos)
+library(scales)
+library(ggrepel)
+library(tidycensus)
+library(curl)
+```
+
+## Load Data
+
+For this exercise, we will be working with subsets of the DEA's ARCOS database, which documented shipments of 76 billion opioid pills between 2006 and 2012, during the peak of the opioid epidemic. First, we will be working with a subset of shipments to Mingo County, West Virginia, which was flooded with hydrocodone and oxycodone during that period.  We will be loading additional data below.
+
+The data was obtained after a lengthy legal battle by the Washington Post and the Charleston Gazette-Mail, and released by the Washington Post in raw and aggregated form. [Washington Post "Digging into the DEA's pain pill database" page](https://www.washingtonpost.com/graphics/2019/investigations/dea-pain-pill-database/).
+
+A data dictionary is available here: [ARCOS Registrant Handbook](https://www.deadiversion.usdoj.gov/arcos/handbook/full.pdf).
+
+```{r}
+
+# Load data and store it as an object called baltimore
+
+baltimore <- read_tsv("arcos-md-baltimore-city-24510-itemized.tsv")
+
+# Load data and store it as an object called howard
+
+howard <- read_tsv("arcos-md-howard-24027-itemized.tsv")
+
+```
+
+## Examine the Data
+
+**Task**: Use glimpse() and View() to get a sense of the data.
+
+```{r}
+glimpse(baltimore)
+```
+
+```{r}
+view(baltimore)
+```
+
+```{r}
+glimpse(howard)
+```
+
+```{r}
+view(howard)
+```
+
+
+***Known risk factors of opioid misuse and addiction include:
+-Poverty
+-Unemployment
+-Family history of substance abuse
+-Personal history of substance abuse
+-Young age
+-History of criminal activity or legal problems including DUIs
+-Regular contact with high-risk people or high-risk environments
+
+#KEYS
+census_api_key("6807e6be8b6aeed023ebd2791acda76a66b32754")
+arcos_key <- "aoQ1LGl"
+#CENSUS DATA VARIABLES
+acs_variables <- load_variables(2012, "acs5", cache = TRUE)
+#GEODATA OF COUNTIES
+county_geodata_shifted <- get_acs(geography = "county",
+              variables = "B01001_001", geometry = TRUE, shift_geo = TRUE)
+#GEODATA OF STATES
+state_geodata_shifted <- get_acs(geography = "state",
+              variables = "B01001_001", geometry = TRUE, shift_geo = TRUE)
+
+              # Add datasets vertically
+rbind(dataset1, dataset2)
+
+# Reorder columns
+reordered_dataset1 <- dataset1[, c(2, 1)]
+
+# See that rbind() is robust to column ordering
+rbind(reordered_dataset1, dataset2)
+
+    ```{r}
+#Q1 - How did the total number of pills sent to Baltimore City change between 2006 and 2012 each year?
+
+baltimore_city_pills_per_year <- arcos_county_pills_per_year %>%
+  filter(buyer_state == "MD", buyer_county == "BALTIMORE CITY") %>%
+  select(year, dosage_unit)
+
+    #line chart
+      ggplot(baltimore_city_pills_per_year) +
+  geom_line(stat="identity", aes(year, dosage_unit))
+
+```
+
+```{r}
+#Q2 -  How did the total number of pills sent to Howard County change between 2006 and 2012 each year?
+baltimore_city_pills_per_year <- arcos_county_pills_per_year %>%
+  filter(buyer_state == "MD", buyer_county == "HOWARD") %>%
+  select(year, dosage_unit)
+```
+
+
+
+```{r}
+#Q3 - Is Baltimore county -  where the median income is lower than Howard County - a place where more deaths have occurred?
+#Using median income for specific counties
+county_medianincome <- get_acs(geography = "county",
+             variables = "ID", geometry = FALSE)
+
+# merge two data frames by ID
+total <- merge(data frameA,data frameB,by="ID")
+
+```
+
+
+```{r}
+#Q4 - What percentage of African Americans were effected/killed by opiods in baltimore city?
+county_african_american_population <- get_acs(geography = "county",
+             variables = "ID", geometry = FALSE)
+```
+
+```{r}
+#Q5 - What percentage of caucasions were effected by opiods in baltimore city?
+county_caucasian_population <- get_acs(geography = "county",
+             variables = "ID", geometry = FALSE)
+```
+
+```{r}
+#Q6 - What percentage of African Americans were effected by opiods in howard county?
+county_african_american_population <- get_acs(geography = "county",
+             variables = "C02003_003", geometry = FALSE)
+```
+
+
+```{r}
+#Q7  - What percentage of caucasians were effected by opiods in howard county?
+```county_caucasian_population <- get_acs(geography = "county",
+             variables = "C02003_003", geometry = FALSE)
+```
+
+```{r}
+#Q8 -  which subset of Baltimore received the most pills per person between 2006 and 2012?
+total_maryland_county_pills_2012 <- maryland_counties_pills_per_year %>%
+  summarise(total_pills = sum(DOSAGE_UNIT))
+
+
+#A8-
+```
+
+```{r}
+#Q9- which subset of Howard County received the most pills per person between 2006 and 2012?
+total_maryland_county_pills_2012 <- maryland_counties_pills_per_year %>%
+  summarise(total_pills = sum(DOSAGE_UNIT))
+```
+
+```{r}
+#Q10 - Looking at the state of Maryland, are counties with a higher poverty rate more likely to have a higher death count?
+county_povertyrate <- get_acs(geography = "county",
+             variables = "B06012_002", geometry = FALSE, summary_var = "B01001_001") %>%
+ mutate(poverty_rate=estimate/summary_est)
+```
+
+```{r}
+#Q11 - Looking at the state of Maryland, are counties with lower housing prices places where death rates were higher?
+county_median_household_prices <- get_acs(geography = "county",
+             variables = "B25105_001", geometry = FALSE)
+```
+
+```{r}
+#Q12 - Looking at the state of Maryland, are counties with lower education levels places where death rates were higher?
+county_education_business_science_jobs <- get_acs(geography = "county",
+             variables = "B24011_010", geometry = FALSE)
+```
+
+```{r}
+#Q13 -Looking at the state of Maryland, are counties with a high criminal record education levels places where death rates were higher?
+
+```
+
+```{r}
+#Q14 -
+```
+
+
+```{r}
+#Q15 -
+```

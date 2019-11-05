@@ -13,38 +13,7 @@ output:
 knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE, paged.print=TRUE)
 ```
 
-## Objective
-
-The purpose of this lab is to continue learning a journalistic approach to data analysis in R. 
-
-We will continue to do things learned in previous labs:
-
-* Writing R code for data analysis and exploration in the R Studio environment, using R projects (.Rproj) and R markdown files (.Rmd).  
-* Loading, cleaning, making sense of and analyzing data using the Tidyverse framework of packages by selecting certain columns, sorting and filtering
-* Create new columns in our data set based on information in other columns.   
-* Summarizing data by grouping and calculating min, max, median and mean values.    
-* Store changes on GitHub.
-
-Today, we'll also:
-
-* Learn how to join together two related data sets on a common field to perform a new kind of analysis, and discuss common problems that arise when doing joins.  
-* Do some additional data cleaning, including fixing dates so we can work with them. 
-
 ## How this works, tasks, turning it in, getting help
-
-This document is mostly set up for you to follow along and run code that I have written, and listen to me explain it.  
-
-At several points throughout this document, you will see the word **Task**.  
-
-That indicates I'm expecting you to modify the file I've given you, usually by creating a codeblock and writing some custom code. 
-
-When you are finished, you should save your R markdown file and Knit it as an HTML file. 
-
-You should upload it to GitHub, using GitHub desktop, a process that will be explained. 
-
-And the links to your project is what you'll post on ELMS. 
-
-Need help?  You are welcome to do the following things:
 
 * Use Google or search Stack Overflow. Try searching for your error message or translating your problem into basic terms.
 * Check out the excellent [R for Data Science](https://r4ds.had.co.nz/index.html)
@@ -56,16 +25,6 @@ Need help?  You are welcome to do the following things:
   * [GitHub desktop help](https://help.github.com/en/desktop/getting-started-with-github-desktop)
 * If you're really stuck, message me on ELMS. 
 
-## Setup
-
-Take the following steps to set up your document:
-
-1. Download the ZIP file and open the folder on your desktop. It should contain this document and the data you'll need.
-2. Create a new folder in your git repo and move it in there. Unzip the folder.
-3. Open this file in RStudio.
-4. Rename this file "lab_05_FIRSTNAME_LASTNAME.Rmd".
-5. Create a new R project inside of this folder, which will set the working directory in this folder.   
-
 ## Load Packages
 
 We're loading three packages today: the Tidyverse, Janitor and a new one, [Lubridate](https://lubridate.tidyverse.org/), which is in the Tidyverse family, but it doesn't load when you load library(tidyverse). So you need to load it separately. 
@@ -75,13 +34,22 @@ We're loading three packages today: the Tidyverse, Janitor and a new one, [Lubri
 ```{r}
 chooseCRANmirror(graphics=FALSE, ind = 1)
 knitr::opts_chunk$set(echo = TRUE)
-install.packages("lubridate")
-install.packages("tidyverse")
-install.packages("janitor")
+#install.packages("lubridate")
+#install.packages("tidyverse")
+#install.packages("janitor")
+#install.packages('arcos')
+#install.packages('ggrepel')
+#install.packages('tidycensus')
+#install.packages('curl')
 # Load Tidyverse and Janitor
 library(janitor)
 library(tidyverse)
 library(lubridate)
+library(arcos)
+library(scales)
+library(ggrepel)
+library(tidycensus)
+library(curl)
 ```
 
 ## Load Data
@@ -96,11 +64,11 @@ A data dictionary is available here: [ARCOS Registrant Handbook](https://www.dea
 
 # Load data and store it as an object called baltimore
 
-baltimore <- read_tsv("arcos-md-baltimore-city-24520-itemized.tsv")
+baltimore <- read_tsv("data/arcos-md-baltimore-city-24520-itemized.tsv")
 
 # Load data and store it as an object called howard
 
-howard<- read_tsv("arcos-md-howard-24027-itemized.tsv)
+howard<- read_tsv("data/arcos-md-howard-24027-itemized.tsv")
 
 ```
 
@@ -125,6 +93,15 @@ view(howard)
 ```
 
 
+***Known risk factors of opioid misuse and addiction include:
+-Poverty
+-Unemployment
+-Family history of substance abuse
+-Personal history of substance abuse
+-Young age
+-History of criminal activity or legal problems including DUIs
+-Regular contact with high-risk people or high-risk environments
+
 #KEYS
 census_api_key("6807e6be8b6aeed023ebd2791acda76a66b32754")
 arcos_key <- "aoQ1LGl"
@@ -137,96 +114,109 @@ county_geodata_shifted <- get_acs(geography = "county",
 state_geodata_shifted <- get_acs(geography = "state",
               variables = "B01001_001", geometry = TRUE, shift_geo = TRUE)
               
-```{p}
-#QUESTION 1 - Is Baltimore county -  where the median income is lower than Howard County - a place where more deaths have occurred?
+    ```{r}
+#Q1 - How did the total number of pills sent to Baltimore City change between 2006 and 2012 each year? 
+
+baltimore_city_pills_per_year <- arcos_county_pills_per_year %>%
+  filter(buyer_state == "MD", buyer_county == "BALTIMORE CITY") %>%
+  select(year, dosage_unit)
+    
+    #line chart
+      ggplot(baltimore_city_pills_per_year) +
+  geom_line(stat="identity", aes(year, dosage_unit))
+
+```
+         
+```{r} 
+#Q2 -  How did the total number of pills sent to Howard County change between 2006 and 2012 each year?  
+baltimore_city_pills_per_year <- arcos_county_pills_per_year %>%
+  filter(buyer_state == "MD", buyer_county == "HOWARD") %>%
+  select(year, dosage_unit)
+```
+         
+         
+              
+```{r}
+#Q3 - Is Baltimore county -  where the median income is lower than Howard County - a place where more deaths have occurred?
 #Using median income for specific counties
 county_medianincome <- get_acs(geography = "county",
-             variables = "B06011_001", geometry = FALSE)
+             variables = "ID", geometry = FALSE)
+
+# merge two data frames by ID
+total <- merge(data frameA,data frameB,by="ID")
+
 ```
 
 
-```{p}
-#QUESTION 2 - What percentage of African Americans were effected/killed by opiods in baltimore city?
+```{r}
+#Q4 - What percentage of African Americans were effected/killed by opiods in baltimore city?
 county_african_american_population <- get_acs(geography = "county",
-             variables = "C02003_003", geometry = FALSE)
+             variables = "ID", geometry = FALSE)
 ```
 
-```{p}
-#QUESTION 3 - What percentage of caucasions were effected by opiods in baltimore city?
+```{r}
+#Q5 - What percentage of caucasions were effected by opiods in baltimore city?
 county_caucasian_population <- get_acs(geography = "county",
-             variables = "C02003_003", geometry = FALSE)
+             variables = "ID", geometry = FALSE)
 ```
 
-```{p}
-#QUESTION 4 - What percentage of African Americans were effected by opiods in howard county?
+```{r}
+#Q6 - What percentage of African Americans were effected by opiods in howard county?
 county_african_american_population <- get_acs(geography = "county",
              variables = "C02003_003", geometry = FALSE)
 ```
 
 
-```{p}
-#QUESTION 5 - What percentage of caucasians were effected by opiods in howard county?
+```{r}
+#Q7  - What percentage of caucasians were effected by opiods in howard county?
 ```county_caucasian_population <- get_acs(geography = "county",
              variables = "C02003_003", geometry = FALSE)
 ```
 
-```{p}
-#QUESTION 6 -  which subset of Baltimore received the most pills per person between 2006 and 2012? 
+```{r}
+#Q8 -  which subset of Baltimore received the most pills per person between 2006 and 2012? 
+total_maryland_county_pills_2012 <- maryland_counties_pills_per_year %>%
+  summarise(total_pills = sum(DOSAGE_UNIT))
+
+
+#A8- 
+```
+
+```{r}
+#Q9- which subset of Howard County received the most pills per person between 2006 and 2012? 
 total_maryland_county_pills_2012 <- maryland_counties_pills_per_year %>%
   summarise(total_pills = sum(DOSAGE_UNIT))
 ```
 
-```{p}
-#QUESTION 7 - which subset of Howard County received the most pills per person between 2006 and 2012? 
-```
-
-```{p}
-#QUESTION 8 - Looking at the state of Maryland, are counties with a higher poverty rate more likely to have a higher death count?
+```{r}
+#Q10 - Looking at the state of Maryland, are counties with a higher poverty rate more likely to have a higher death count?
 county_povertyrate <- get_acs(geography = "county",
              variables = "B06012_002", geometry = FALSE, summary_var = "B01001_001") %>%
  mutate(poverty_rate=estimate/summary_est)
 ```
 
-
-```{p}
-#Question 9 - Looking at the state of Maryland, are counties with lower housing prices places where death rates were higher?
+```{r}
+#Q11 - Looking at the state of Maryland, are counties with lower housing prices places where death rates were higher?
 county_median_household_prices <- get_acs(geography = "county",
              variables = "B25105_001", geometry = FALSE)
 ```
 
-```{p}
-#Question 10 - Looking at the state of Maryland, are counties with lower education levels places where death rates were higher?
+```{r}
+#Q12 - Looking at the state of Maryland, are counties with lower education levels places where death rates were higher?
 county_education_business_science_jobs <- get_acs(geography = "county",
              variables = "B24011_010", geometry = FALSE)
 ```
 
+```{r}
+#Q13 -Looking at the state of Maryland, are counties with a high criminal record education levels places where death rates were higher?
+
+```
+
+```{r}
+#Q14 -
+```
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+```{r}
+#Q15 -
+```
