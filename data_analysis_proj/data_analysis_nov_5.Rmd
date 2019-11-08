@@ -32,16 +32,16 @@ We're loading three packages today: the Tidyverse, Janitor and a new one, [Lubri
 **Task**: In the code block below, load the Tidyverse family of packages, the Janitor package, and the Lubridate package. If you've never loaded lubridate before, you'll need to install it first. You should be good at installing and loading packages at this point. If you have problems, Google it or look at previous labs.
 
 ```{r}
-chooseCRANmirror(graphics=FALSE, ind = 1)
-knitr::opts_chunk$set(echo = TRUE)
-#install.packages("lubridate")
-#install.packages("tidyverse")
-#install.packages("janitor")
-#install.packages('arcos')
-#install.packages('ggrepel')
-#install.packages('tidycensus')
-#install.packages('curl')
-# Load Tidyverse and Janitor
+#chooseCRANmirror(graphics=FALSE, ind = 1)
+#knitr::opts_chunk$set(echo = TRUE)
+install.packages("lubridate")
+install.packages("tidyverse")
+install.packages("janitor")
+install.packages('arcos')
+install.packages('ggrepel')
+install.packages('tidycensus')
+install.packages('curl')
+#n Load Tidyverse and Janitor
 library(janitor)
 library(tidyverse)
 library(lubridate)
@@ -59,6 +59,54 @@ For this exercise, we will be working with subsets of the DEA's ARCOS database, 
 The data was obtained after a lengthy legal battle by the Washington Post and the Charleston Gazette-Mail, and released by the Washington Post in raw and aggregated form. [Washington Post "Digging into the DEA's pain pill database" page](https://www.washingtonpost.com/graphics/2019/investigations/dea-pain-pill-database/).
 
 A data dictionary is available here: [ARCOS Registrant Handbook](https://www.deadiversion.usdoj.gov/arcos/handbook/full.pdf).
+
+# Read in data
+
+```{r}
+
+# Turn off scientific notation 
+options(scipen=999)
+
+# https://github.com/wpinvestigative/arcos
+# ARCOS API Key
+key <- "uO4EK6I"
+
+# Get every county pill totals by year
+arcos_county_pills_per_year <- summarized_county_annual(key = key) %>%
+  clean_names()
+
+# Get county population totals
+arcos_county_population_per_year <- county_population(key=key)
+
+# Get Howard County raw data
+howard_county <- county_raw(key=key, state="MD", county="Howard")
+
+# Get Baltimore City
+baltimore_city <-county_raw(key=key, state="MD", county = "Baltimore City")
+
+# Census API Key
+census_api_key("549950d36c22ff16455fe196bbbd01d63cfbe6cf")
+
+# Pull in median household income data
+# Look at variables by running this command and looking at the table. 
+census_variables <- load_variables(2012,"acs5")
+
+
+county_median_income <- get_acs(geography = "county", variables = "B19013_001", year=2012, geometry = FALSE)
+
+vt <- get_acs(geography = "county", 
+              variables = c(medincome = "B19013_001"), 
+              state = "VT")
+
+
+
+```
+
+
+
+
+
+
 
 ```{r}
 
@@ -148,11 +196,51 @@ baltimore_city_pills_per_year <- arcos_county_pills_per_year %>%
 ```{r}
 #Q3 - Is Baltimore county -  where the median income is lower than Howard County - a place where more deaths have occurred?
 #Using median income for specific counties
-county_medianincome <- get_acs(geography = "county",
-             variables = "ID", geometry = FALSE)
 
-# merge two data frames by ID
-total <- merge(data frameA,data frameB,by="ID")
+# Q3 - Were communities that were wealthier more likely to receiver higher numbers of pills (per person) than less well off communities. 
+
+# Calculating the average number of pills per county per year
+
+county_average_pills_per_year <- arcos_county_pills_per_year %>%
+  group_by(countyfips, buyer_state, buyer_county) %>%
+  summarise(average_pills_per_year = mean(dosage_unit))
+
+# Calculate the average population per county per year
+
+county_average_population_per_year <- arcos_county_population_per_year %>%
+  group_by(countyfips, BUYER_STATE, BUYER_COUNTY) %>%
+  summarise(average_population_per_year = mean(population))
+
+# Put the population table and pills table together, so we can calculate pills per person per year on average
+
+county_average_pills_population <- county_average_pills_per_year %>%
+  inner_join(county_average_population_per_year, by=("countyfips")) %>%
+  select(-BUYER_COUNTY, -BUYER_STATE) %>%
+  mutate(pills_per_person = average_pills_per_year/average_population_per_year)
+
+
+# Add in income data
+
+county_average_pills_population_income <- county_average_pills_population %>%
+  inner_join(county_median_income, by=c("countyfips" = "GEOID")) %>%
+  select(-NAME,-variable, -moe) %>%
+  rename(median_household_income = estimate)
+
+ggplot(county_average_pills_population_income) +
+  geom_point(aes(pills_per_person, median_household_income)) +
+  labs(x="Pills Per person", y="Median Household Income", title="", caption = "Source: DEA ARCOS database, via Washington Post", fill="buyer_county") +
+  scale_y_continuous(labels = comma) +
+  scale_x_continuous(labels = comma) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_smooth(aes(pills_per_person, median_household_income), method = "lm", se = FALSE)
+
+# install.packages('corrr')
+#library(corrr)
+county_average_pills_population_income %>%
+  ungroup() %>%
+  filter(!is.na(pills_per_person), !is.na(median_household_income)) %>%
+  select(pills_per_person, median_household_income) %>%
+  correlate()
 
 ```
 
