@@ -34,13 +34,17 @@ We're loading three packages today: the Tidyverse, Janitor and a new one, [Lubri
 ```{r}
 #chooseCRANmirror(graphics=FALSE, ind = 1)
 #knitr::opts_chunk$set(echo = TRUE)
-install.packages("lubridate")
-install.packages("tidyverse")
-install.packages("janitor")
-install.packages('arcos')
-install.packages('ggrepel')
-install.packages('tidycensus')
-install.packages('curl')
+#install.packages("lubridate")
+#install.packages("tidyverse")
+#install.packages("janitor")
+#install.packages('arcos')
+#install.packages('ggrepel')
+#install.packages('tidycensus')
+#install.packages('curl')
+
+# Turn off sci notation
+options(scipen = 999)
+
 #n Load Tidyverse and Janitor
 library(janitor)
 library(tidyverse)
@@ -50,6 +54,7 @@ library(scales)
 library(ggrepel)
 library(tidycensus)
 library(curl)
+library(corrr)
 ```
 
 ## Load Data
@@ -98,6 +103,14 @@ vt <- get_acs(geography = "county",
               variables = c(medincome = "B19013_001"), 
               state = "VT")
 
+# County nonwhite population
+
+county_nonwhite_population <- get_acs(geography = "county", variables = "B02001_002", summary_var = "B01001_001", year=2012, geometry = FALSE) %>%
+  mutate(non_white_population = summary_est - estimate) %>%
+  mutate(pct_nonwhite_population = non_white_population/summary_est*100)
+
+# Load in opiod death data
+opiod_death_rate <- read_tsv("data/cdc_opioid_drug_overdoses/2006-2012.txt")
 
 
 ```
@@ -121,25 +134,6 @@ howard <- read_tsv("arcos-md-howard-24027-itemized.tsv")
 ```
 
 ## Examine the Data
-
-**Task**: Use glimpse() and View() to get a sense of the data.
-
-```{r}
-glimpse(baltimore)
-```
-
-```{r}
-view(baltimore)
-```
-
-```{r}
-glimpse(howard)
-```
-
-```{r}
-view(howard)
-```
-
 
 ***Known risk factors of opioid misuse and addiction include:
 -Poverty
@@ -181,23 +175,30 @@ baltimore_city_pills_per_year <- arcos_county_pills_per_year %>%
     #line chart
       ggplot(baltimore_city_pills_per_year) +
   geom_line(stat="identity", aes(year, dosage_unit))
+      
+#A1 - By 2007, those who received opiods took a huge dip. The years that followed, we can infer there was a slow and steady increase by each year of dosage units that baltimore city recieved.
 
 ```
 
 ```{r}
 #Q2 -  How did the total number of pills sent to Howard County change between 2006 and 2012 each year?
-baltimore_city_pills_per_year <- arcos_county_pills_per_year %>%
+Howard_county_pills_per_year <- arcos_county_pills_per_year %>%
   filter(buyer_state == "MD", buyer_county == "HOWARD") %>%
   select(year, dosage_unit)
+
+ #line chart
+      ggplot(Howard_county_pills_per_year) +
+  geom_line(stat="identity", aes(year, dosage_unit))
+      
+#A2- From 2006 to 2012, there has been a steady increase of pills coming into Howard County within the years.
 ```
 
 
 
 ```{r}
-#Q3 - Is Baltimore county -  where the median income is lower than Howard County - a place where more deaths have occurred?
-#Using median income for specific counties
-
 # Q3 - Were communities that were wealthier more likely to receiver higher numbers of pills (per person) than less well off communities. 
+
+#A3- Draw analysis
 
 # Calculating the average number of pills per county per year
 
@@ -232,7 +233,9 @@ ggplot(county_average_pills_population_income) +
   scale_y_continuous(labels = comma) +
   scale_x_continuous(labels = comma) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_smooth(aes(pills_per_person, median_household_income), method = "lm", se = FALSE)
+  geom_smooth(aes(pills_per_person, median_household_income), method = "lm", se = FALSE) +
+  geom_label_repel(aes(pills_per_person, median_household_income, label=buyer_county),
+                  subset(county_average_pills_population_income, buyer_state == "MD" & buyer_county =="HOWARD" | buyer_county =="BALTIMORE CITY"))
 
 # install.packages('corrr')
 #library(corrr)
@@ -242,77 +245,152 @@ county_average_pills_population_income %>%
   select(pills_per_person, median_household_income) %>%
   correlate()
 
-```
 
+county_average_pills_population_income %>%
+  select(buyer_county, pills_per_person, median_household_income) %>%
+  filter((buyer_county == "BALTIMORE CITY" | buyer_county == "HOWARD") & buyer_state == "MD")
 
-```{r}
-#Q4 - What percentage of African Americans were effected/killed by opiods in baltimore city?
-county_african_american_population <- get_acs(geography = "county",
-             variables = "ID", geometry = FALSE)
 ```
 
 ```{r}
-#Q5 - What percentage of caucasions were effected by opiods in baltimore city?
+#Q4 - Do communities with higher death rates have higher median incomes? how do howard county and baltimroe city fit in with this trend? 
+#A4 - Based on this chart, genereally yes. There are a few outliers of course. Howard Count has the highest median income and ... while Baltimore City
+
+opiod_death_rate_income <- opiod_death_rate %>%
+  inner_join(county_median_income, by=c("County Code" = "GEOID")) %>%
+  select(-NAME,-variable, -moe) %>%
+  rename(median_household_income = estimate) %>%
+  mutate(age_adjusted_rate = as.numeric(`Age Adjusted Rate`)) %>%
+  filter(!is.na(age_adjusted_rate)) %>%
+  filter(str_detect(County, ", MD"))
+
+
+ggplot(opiod_death_rate_income) +
+  geom_point(aes(age_adjusted_rate, median_household_income)) +
+  labs(x="opiod_death_rate", y="Median Household Income", title="", caption = "Source: DEA ARCOS database, via Washington Post", fill="buyer_county") +
+  scale_y_continuous(labels = comma) +
+  scale_x_continuous(labels = comma) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_smooth(aes(age_adjusted_rate, median_household_income), method = "lm", se = FALSE) +
+  geom_label_repel(aes(age_adjusted_rate, median_household_income, label=County),
+                  subset(opiod_death_rate_income, County == "Howard County, MD" | County == "Baltimore city, MD")
+                  )
+
+opiod_death_rate_income %>%
+  ungroup() %>%
+  filter(!is.na(age_adjusted_rate), !is.na(median_household_income)) %>%
+  select(age_adjusted_rate, median_household_income) %>%
+  correlate()
+
+```
+
+```{r}
+#Q5 -Do communities with a larger share of minorities have a higher opioid death rate? 
+#A5- Though more nonwhite populations appear to have a higher death rate, Baltimore city is the outlier. 
+
+# In county_nonwhite_population there's a column called pct_nonwhite_popultion.  So if you repeat the code blocks from above, but swap out this table and column name for median income it should work
+
+#county_nonwhite_population <- get_acs(geography = "county", variables = "B02001_002", summary_var = "B01001_001", year=2012, geometry = FALSE) %>%
+  #mutate(non_white_population = summary_est - estimate) %>%
+  #mutate(pct_nonwhite_population = non_white_population/summary_est*100)
+
+nonwhite_population_death_rate <- opiod_death_rate %>%
+  inner_join(county_nonwhite_population, by=c("County Code" = "GEOID")) %>%
+  select(-NAME,-variable, -moe) %>%
+  mutate(age_adjusted_rate = as.numeric(`Age Adjusted Rate`)) %>%
+  filter(!is.na(age_adjusted_rate)) # %>%
+  #filter(str_detect(County, ", MD"))
+
+
+ggplot(nonwhite_population_death_rate) +
+  geom_point(aes(age_adjusted_rate, pct_nonwhite_population)) +
+  labs(x="opiod_death_rate", y="nonwhite_population", title="", caption = "Source: DEA ARCOS database, via Washington Post", fill="buyer_county") +
+  scale_y_continuous(labels = comma) +
+  scale_x_continuous(labels = comma) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_smooth(aes(age_adjusted_rate, pct_nonwhite_population), method = "lm", se = FALSE) +
+  geom_label_repel(aes(age_adjusted_rate, pct_nonwhite_population, label=County),
+                  subset(nonwhite_population_death_rate, County == "Howard County, MD" | County == "Baltimore city, MD")
+                  )
+
+nonwhite_population_death_rate %>%
+  ungroup() %>%
+  filter(!is.na(age_adjusted_rate), !is.na(pct_nonwhite_population)) %>%
+  select(age_adjusted_rate, pct_nonwhite_population) %>%
+  correlate()
+
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+```{r}
+#Q6 - What percentage of caucasions were effected by opiods in baltimore city?
 county_caucasian_population <- get_acs(geography = "county",
              variables = "ID", geometry = FALSE)
 ```
 
 ```{r}
-#Q6 - What percentage of African Americans were effected by opiods in howard county?
+#Q7 - What percentage of African Americans were effected by opiods in howard county?
 county_african_american_population <- get_acs(geography = "county",
              variables = "C02003_003", geometry = FALSE)
 ```
 
 
 ```{r}
-#Q7  - What percentage of caucasians were effected by opiods in howard county?
-```county_caucasian_population <- get_acs(geography = "county",
+#Q8  - What percentage of caucasians were effected by opiods in howard county?
+county_caucasian_population <- get_acs(geography = "county",
              variables = "C02003_003", geometry = FALSE)
 ```
 
 ```{r}
-#Q8 -  which subset of Baltimore received the most pills per person between 2006 and 2012?
+#Q9 -  which subset of Baltimore received the most pills per person between 2006 and 2012?
 total_maryland_county_pills_2012 <- maryland_counties_pills_per_year %>%
   summarise(total_pills = sum(DOSAGE_UNIT))
 
 
-#A8-
+#A9-
 ```
 
 ```{r}
-#Q9- which subset of Howard County received the most pills per person between 2006 and 2012?
+#Q10- which subset of Howard County received the most pills per person between 2006 and 2012?
 total_maryland_county_pills_2012 <- maryland_counties_pills_per_year %>%
   summarise(total_pills = sum(DOSAGE_UNIT))
 ```
 
 ```{r}
-#Q10 - Looking at the state of Maryland, are counties with a higher poverty rate more likely to have a higher death count?
+#Q11 - Looking at the state of Maryland, are counties with a higher poverty rate more likely to have a higher death count?
 county_povertyrate <- get_acs(geography = "county",
              variables = "B06012_002", geometry = FALSE, summary_var = "B01001_001") %>%
  mutate(poverty_rate=estimate/summary_est)
 ```
 
 ```{r}
-#Q11 - Looking at the state of Maryland, are counties with lower housing prices places where death rates were higher?
+#Q12 - Looking at the state of Maryland, are counties with lower housing prices places where death rates were higher?
 county_median_household_prices <- get_acs(geography = "county",
              variables = "B25105_001", geometry = FALSE)
 ```
 
 ```{r}
-#Q12 - Looking at the state of Maryland, are counties with lower education levels places where death rates were higher?
+#Q13 - Looking at the state of Maryland, are counties with lower education levels places where death rates were higher?
 county_education_business_science_jobs <- get_acs(geography = "county",
              variables = "B24011_010", geometry = FALSE)
 ```
 
 ```{r}
-#Q13 -Looking at the state of Maryland, are counties with a high criminal record education levels places where death rates were higher?
+#Q14 -Looking at the state of Maryland, are counties with a high criminal record education levels places where death rates were higher?
 
 ```
-
-```{r}
-#Q14 -
-```
-
 
 ```{r}
 #Q15 -
