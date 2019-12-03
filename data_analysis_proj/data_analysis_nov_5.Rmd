@@ -393,5 +393,82 @@ county_education_business_science_jobs <- get_acs(geography = "county",
 ```
 
 ```{r}
-#Q15 -
+#Q15 -How did the flow of pills into Howard County, Maryland change over time?
+```
+
+```{r}
+#Q16 -How did the flow of pills into Baltimore City, Maryland change over time?
+```
+
+```{r}
+#Q17 -Which distributors were most responsible for flooding pills into Howard County at the height of the opioid crisis?
+```
+
+```{r}
+#Q18 -Which distributors were most responsible for flooding pills into Baltimore City at the height of the opioid crisis?
+```
+
+
+```{r}
+#Q19 -Purdue Pharma is often credited with/blamed for launching the opioid crisis. What do the flow of sales from that drug company look like from both Howard County and Baltimore City?
+
+HOCO
+```
+
+```{r}
+#Q20
+
+BALTIMORE CITY
+```
+
+```{r}
+#Q21
+
+```
+
+
+```{r}
+#Q22
+
+```
+
+
+```{r}
+#Q23
+
+```
+
+```{r}
+#Q24
+
+```
+
+```{r}
+#Q25
+
+```
+
+```{r}
+#Q26
+
+```
+
+```{r}
+#Q27
+
+```
+
+```{r}
+#Q28
+
+```
+
+```{r}
+#Q29
+
+```
+
+```{r}
+#Q30
+
 ```
