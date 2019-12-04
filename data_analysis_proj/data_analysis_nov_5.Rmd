@@ -198,7 +198,7 @@ Howard_county_pills_per_year <- arcos_county_pills_per_year %>%
 ```{r}
 # Q3 - Were communities that were wealthier more likely to receiver higher numbers of pills (per person) than less well off communities. 
 
-#A3- Draw analysis
+#A3- Comparing Howard County and Baltimore city, no, that was not the case. Looking at the data, Howard County had less pills per person than Baltimore (23 pills to 30 pills), and HOCO's median household income is nearly triple the amount Baltimore City's is.
 
 # Calculating the average number of pills per county per year
 
@@ -254,7 +254,9 @@ county_average_pills_population_income %>%
 
 ```{r}
 #Q4 - Do communities with higher death rates have higher median incomes? how do howard county and baltimroe city fit in with this trend? 
-#A4 - Based on this chart, genereally yes. There are a few outliers of course. Howard Count has the highest median income and ... while Baltimore City
+#A4 - Looking at Howard County and Baltimore City, no - this is not the case. Howard County's Median Household Income is well over 100k and holds the highest income of any county in Maryland. Baltimore however, has one of the lowest incomes (about 40k) and has 5x the death rate of Howard County.
+
+
 
 opiod_death_rate_income <- opiod_death_rate %>%
   inner_join(county_median_income, by=c("County Code" = "GEOID")) %>%
@@ -267,7 +269,7 @@ opiod_death_rate_income <- opiod_death_rate %>%
 
 ggplot(opiod_death_rate_income) +
   geom_point(aes(age_adjusted_rate, median_household_income)) +
-  labs(x="opiod_death_rate", y="Median Household Income", title="", caption = "Source: DEA ARCOS database, via Washington Post", fill="buyer_county") +
+  labs(x="Opioid Death Rate", y="Median Household Income", title="", caption = "Source: DEA ARCOS database, via Washington Post", fill="buyer_county") +
   scale_y_continuous(labels = comma) +
   scale_x_continuous(labels = comma) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
@@ -285,8 +287,33 @@ opiod_death_rate_income %>%
 ```
 
 ```{r}
-#Q5 -Do communities with a larger share of minorities have a higher opioid death rate? 
-#A5- Though more nonwhite populations appear to have a higher death rate, Baltimore city is the outlier. 
+#Q5 - Do communities with higher death rates have higher median incomes on a NATIONAL SCALE?
+#A5- Becuase HOCO and baltimore are outliers, they do not align themselves or are not indicative compared on a national scale.
+total_opiod_death_rate_income <- opiod_death_rate %>%
+  inner_join(county_median_income, by=c("County Code" = "GEOID")) %>%
+  select(-NAME,-variable, -moe) %>%
+  rename(median_household_income = estimate) %>%
+  mutate(age_adjusted_rate = as.numeric(`Age Adjusted Rate`)) %>%
+  filter(!is.na(age_adjusted_rate))
+
+  ggplot(total_opiod_death_rate_income) +
+    geom_point(aes(age_adjusted_rate, median_household_income)) +
+    labs(x="Age adjusted rate", y="Median Household Income", title="", caption = "Source: DEA ARCOS database, via Washington Post", fill="buyer_county") +
+    scale_y_continuous(labels = comma) +
+    scale_x_continuous(labels = comma) + 
+    theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+    geom_smooth(aes(age_adjusted_rate, median_household_income), method = "loess", se = FALSE) +
+    geom_label_repel(aes(age_adjusted_rate, median_household_income, label=County),
+                  subset(total_opiod_death_rate_income, County == "Howard County, MD" | County == "Baltimore city, MD")
+                  )
+  
+
+```
+
+
+```{r}
+#Q6 -Do communities with a larger share of minorities have a higher opioid death rate? 
+#A6- Though more nonwhite populations appear to have a higher death rate, Baltimore city is the outlier. 
 
 # In county_nonwhite_population there's a column called pct_nonwhite_popultion.  So if you repeat the code blocks from above, but swap out this table and column name for median income it should work
 
@@ -308,9 +335,9 @@ ggplot(nonwhite_population_death_rate) +
   scale_y_continuous(labels = comma) +
   scale_x_continuous(labels = comma) + 
   theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  geom_smooth(aes(age_adjusted_rate, pct_nonwhite_population), method = "lm", se = FALSE) +
+  geom_smooth(aes(age_adjusted_rate, pct_nonwhite_population), method = "loess", se = FALSE) +
   geom_label_repel(aes(age_adjusted_rate, pct_nonwhite_population, label=County),
-                  subset(nonwhite_population_death_rate, County == "Howard County, MD" | County == "Baltimore city, MD")
+                  subset(nonwhite_population_death_rate, County == "Howard County, MD" | County == "Baltimore city, MD" | County == "Cherokee County, OK" | County == "St. Louis city, MO")
                   )
 
 nonwhite_population_death_rate %>%
@@ -322,82 +349,118 @@ nonwhite_population_death_rate %>%
 
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
+#Q7 - What nonwhite-populations (similar to Baltimore) also have high opioid death rate? 
+#A7 St. Louis, MO |  Cherokee County, OK | Columbus County, NC | Valencia County, NM
 ```{r}
-#Q6 - What percentage of caucasions were effected by opiods in baltimore city?
-county_caucasian_population <- get_acs(geography = "county",
-             variables = "ID", geometry = FALSE)
+
+test <- nonwhite_population_death_rate %>%
+  filter(pct_nonwhite_population > 30,
+         age_adjusted_rate > 15)
+
+ggplot(test) +
+  geom_point(aes(age_adjusted_rate, pct_nonwhite_population)) +
+  labs(x="opiod_death_rate", y="nonwhite_population", title="", caption = "Source: DEA ARCOS database, via Washington Post", fill="buyer_county") +
+  scale_y_continuous(labels = comma) +
+  scale_x_continuous(labels = comma) + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  geom_smooth(aes(age_adjusted_rate, pct_nonwhite_population), method = "loess", se = FALSE) +
+  geom_label_repel(aes(age_adjusted_rate, pct_nonwhite_population, label=County)
+                  #subset(nonwhite_population_death_rate, County == "Howard County, MD" | County == "Baltimore city, MD" )
+                  )
+
 ```
 
 ```{r}
-#Q7 - What percentage of African Americans were effected by opiods in howard county?
-county_african_american_population <- get_acs(geography = "county",
-             variables = "C02003_003", geometry = FALSE)
+#Q8 - What is the correlation between death rates and Household Median Income on a National Scale?
+#A8 - This has a considerably weak correlation. On a national level, the higher the median household income is, there becomes fewer death rates on average.
+
+total_opiod_death_rate_income %>%
+  ungroup()%>%
+  select(age_adjusted_rate, median_household_income) %>%
+  correlate() %>%
+  slice(2)
 ```
 
 
+CRIME RATE
 ```{r}
-#Q8  - What percentage of caucasians were effected by opiods in howard county?
-county_caucasian_population <- get_acs(geography = "county",
-             variables = "C02003_003", geometry = FALSE)
+#Q9  - What is the crime rate in Baltimore in comparison on a National Level?
+
+#A9
 ```
 
 ```{r}
-#Q9 -  which subset of Baltimore received the most pills per person between 2006 and 2012?
-total_maryland_county_pills_2012 <- maryland_counties_pills_per_year %>%
-  summarise(total_pills = sum(DOSAGE_UNIT))
+#Q10 -  What is the crime rate in St. Louis, MO in comparison on a National Level?
 
-
-#A9-
+#A10-
 ```
 
 ```{r}
-#Q10- which subset of Howard County received the most pills per person between 2006 and 2012?
-total_maryland_county_pills_2012 <- maryland_counties_pills_per_year %>%
-  summarise(total_pills = sum(DOSAGE_UNIT))
+#Q11- What is the crime rate of Cherokee County, OK in comparison to a national level?
+```
+
+AGE DEMOGRAPHIC
+```{r}
+#Q12 - In Baltimore city, what age group is the MOST effected by this epidemic
+
+
+#Q13 What follows it?
+
 ```
 
 ```{r}
-#Q11 - Looking at the state of Maryland, are counties with a higher poverty rate more likely to have a higher death count?
-county_povertyrate <- get_acs(geography = "county",
-             variables = "B06012_002", geometry = FALSE, summary_var = "B01001_001") %>%
- mutate(poverty_rate=estimate/summary_est)
+#Q14 - In St. Louis, what age group is the MOST effected by this epidemic
+
+
+#Q15 What follows it?
+
 ```
 
 ```{r}
-#Q12 - Looking at the state of Maryland, are counties with lower housing prices places where death rates were higher?
+#Q16 - In St. Louis, what age group is the MOST effected by this epidemic
+
+
+#Q17 What follows it?
+
+```
+
+```{r}
+#Q18 - Compared to nationally... where does Baltimore City rank in education?
+```
+
+```{r}
+#Q17 Compared to nationally... where does St. Louis rank in education?
+
+```
+
+```{r}
+#Q18 Comparedt to nationally... where does Cherokee County rank in education?
+```
+
+
+
+
+
+
+
+#Q13 - Looking at the state of Maryland, are counties with lower housing prices places where death rates were higher?
 county_median_household_prices <- get_acs(geography = "county",
              variables = "B25105_001", geometry = FALSE)
 ```
 
 ```{r}
-#Q13 - Looking at the state of Maryland, are counties with lower education levels places where death rates were higher?
+#Q14 - Looking at the state of Maryland, are counties with lower education levels places where death rates were higher?
 county_education_business_science_jobs <- get_acs(geography = "county",
              variables = "B24011_010", geometry = FALSE)
 ```
 
 ```{r}
-#Q14 -Looking at the state of Maryland, are counties with a high criminal record education levels places where death rates were higher?
+#Q15 -Looking at the state of Maryland, are counties with a high criminal record education levels places where death rates were higher?
 
 ```
 
 ```{r}
-#Q15 -How did the flow of pills into Howard County, Maryland change over time?
-```
-
-```{r}
-#Q16 -How did the flow of pills into Baltimore City, Maryland change over time?
+#Q16 -
 ```
 
 ```{r}
