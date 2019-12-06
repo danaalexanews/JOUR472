@@ -7,26 +7,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
-
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-When you click the **Knit** button a document will be generated that includes both content as well as the output of any embedded R code chunks within the document. You can embed an R code chunk like this:
-
-```{r cars}
-summary(cars)
-```
-
-## Including Plots
-
-You can also embed plots, for example:
-
-```{r pressure, echo=FALSE}
-plot(pressure)
-```
-
-Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
-
 ## Load Packages
 ```{r}
 #chooseCRANmirror(graphics=FALSE, ind = 1)
@@ -152,6 +132,13 @@ reordered_dataset1 <- dataset1[, c(2, 1)]
 # See that rbind() is robust to column ordering
 rbind(reordered_dataset1, dataset2)
 
+
+
+
+
+**start of project
+
+#NUMBER OF PILLS FLOWING THROUGH BALTIMORE CITY
     ```{r}
 #Q1 - How did the total number of pills sent to Baltimore City change between 2006 and 2012 each year?
 
@@ -166,7 +153,7 @@ baltimore_city_pills_per_year <- arcos_county_pills_per_year %>%
 #A1 - By 2007, those who received opiods took a huge dip. The years that followed, we can infer there was a slow and steady increase by each year of dosage units that baltimore city recieved.
 
 ```
-
+#BALTIMORE DEATH RATE, MEDIAN INCOME
 ```{r}
 #Q2 - Do communities with higher death rates have higher median incomes on a NATIONAL SCALE?
 #A2- Becuase HOCO and baltimore are outliers, they do not align themselves or are not indicative compared on a national scale.
@@ -189,7 +176,7 @@ total_opiod_death_rate_income <- opiod_death_rate %>%
                   )
 
 ```
-
+#MINORITIES V. DEATH RATE
 ```{r}
 #Q3-Do communities with a larger share of minorities have a higher opioid death rate? 
 #A3- Though more nonwhite populations appear to have a higher death rate, Baltimore city is the outlier. 
@@ -241,11 +228,9 @@ pills_per_person_county <- arcos_county_pills_per_year %>%
 # But there are exceptions.  Both Baltimore City and St. Louis Missouri have opioid death rates that are similar to nearly all white Appalchian counties in Tennessee, Kentucky and Knott County that were the center of the opioid crisis. And in Baltimore's case, it had a much higher death rate than Prince George's County Maryland, which has a nearly identical percentage of black population. A GRAPH SHOWING THIS
 # Shipments of opioids do a pretty good job of explaining the death rate in many communities. GRAPH of pills_per_person deaths. 
 # BUt not in Baltimore.  
-
 # Let's look at why Baltimore is similar and different to our comparison counties. 
   # SIMILAR to Appalachia: death rate for sure.  What about poverty or median income? what about education? what about life expectancy?
   # DIFFERENT than Appalachia: race for sure. poplation density or "ruralness" 
-
   # SIMILAR to PG COunty: race for sure -- high non-white population.  
   # DIFFEREN to PG Ccounty: education? income? poverty?
 # I want to figure out why.
@@ -293,6 +278,152 @@ ggplot(test) +
 
 ```
 
+
+```{r}
+census_api_key("549950d36c22ff16455fe196bbbd01d63cfbe6cf")
+'install = TRUE'
+
+# B16010_015 = high school or equivalent
+  # B16010_041 = bachelor's degree
+  # B16010_028 = Estimate!!Total!!Some college or associate's degree
+  # B16010_002 = Less than high school
+  # B17018_025 = total income in past 12 months at or above poverty level
+  # B17018_001 = poverty 
+  # B17018_002 = income in last 12 months below poverty level
+
+bach_degree <- get_acs(geography = "county", 
+              variables = c(medincome = "B16010_041"),
+              year = 2010,
+              state = "MD")
+hs_or_equivalent <-get_acs(geography = "county", 
+              variables = c(medincome = "B16010_015"),
+              year = 2010,
+              state = "MD")
+
+assoc_degree <- get_acs(geography = "county", 
+              variables = c(medincome = "B16010_028"),
+              year = 2010,
+              state = "MD")
+
+under_hs <- get_acs(geography = "county", 
+              variables = c(medincome = "B16010_002"),
+              year = 2010,
+              state = "MD")
+
+income_above_poverty_level <- get_acs(geography = "county", 
+              variables = c(medincome = "B17018_025"),
+              year = 2010,
+              state = "MD")
+
+poverty <- get_acs(geography = "county", 
+              variables = c(medincome = "B17018_001"),
+              year = 2010,
+              state = "MD")
+
+income_below_poverty_level <- get_acs(geography = "county", 
+              variables = c(medincome = "B17018_002"),
+              year = 2010,
+              state = "MD")
+
+#XXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
+
+bach_degree <- bach_degree %>%
+  mutate(bach_degree = estimate) %>% 
+  select(-variable, -moe, -estimate) %>%
+  clean_names()
+
+hs_or_equivalent <-hs_or_equivalent %>%
+  mutate(hs_or_equivalent = estimate) %>%
+  select(-variable, -moe, -estimate) %>%
+  clean_names()
+
+assoc_degree <- assoc_degree %>%
+  mutate(assoc_degree = estimate) %>%
+  select(-variable, -moe,-estimate) %>%
+  clean_names()
+  
+
+under_hs <- under_hs %>%
+mutate(under_hs = estimate) %>%
+select(-variable, -moe,-estimate) %>%
+  clean_names() 
+  
+income_above_poverty_level <- income_above_poverty_level %>%
+  mutate(income_above_poverty_level = estimate) %>%
+  select(-variable, -moe,-estimate) %>%
+  clean_names()
+
+poverty <-poverty %>%
+  mutate(poverty = estimate) %>%
+  select(-variable, -moe,-estimate) %>%
+  clean_names()
+  
+income_below_poverty_level <- income_below_poverty_level %>%
+  mutate(income_below_poverty_level = estimate) %>%
+  select(-variable, -moe,-estimate) %>%
+  clean_names()
+
+
+save_data <- start_data %>%
+  inner_join(second_data_frame, by = "the common column or columns")
+  
+md_edu_total <- bach_degree %>%
+  inner_join(hs_or_equivalent,  by=c("name", "geoid")) %>%
+  inner_join(assoc_degree, by=c("name", "geoid")) %>%
+  inner_join(under_hs, by=c("name", "geoid")) %>%
+  inner_join(income_above_poverty_level, by=c("name", "geoid")) %>%
+  inner_join(poverty, by=c("name", "geoid")) %>%
+  inner_join(income_below_poverty_level, by=c("name", "geoid"))
+
+#XXXXXXXXXXXXXXXXXXXXXXXXXXXXXx
+tn_bach_degree <- get_acs(geography = "county", 
+              variables = c(tn_bach_degree = "B16010_041"),
+              year = 2010,
+              state = "TN")
+tn_hs_or_equivalent <-get_acs(geography = "county", 
+              variables = c(tn_hs_or_equivalent = "B16010_015"),
+              year = 2010,
+              state = "TN")
+
+tn_assoc_degree <- get_acs(geography = "county", 
+              variables = c(tn_assoc_degree = "B16010_028"),
+              year = 2010,
+              state = "TN")
+
+tn_under_hs <- get_acs(geography = "county", 
+              variables = c(tn_under_hs = "B16010_002"),
+              year = 2010,
+              state = "TN")
+
+tn_income_above_poverty_level <- get_acs(geography = "county", 
+              variables = c(tn_income_above_poverty_level = "B17018_025"),
+              year = 2010,
+              state = "TN")
+
+tn_poverty <- get_acs(geography = "county", 
+              variables = c(tn_poverty = "B17018_001"),
+              year = 2010,
+              state = "TN")
+
+tn_income_below_poverty_level <- get_acs(geography = "county", 
+              variables = c(tn_income_below_poverty_level = "B17018_002"),
+              year = 2010,
+              state = "TN")
+
+
+```
+
+
+
+***next step is to interjoin tennesse stuff with marylad stuff 
+
+
+```
+
+
+
+
+#DEATH RATE V. HOUSEHOLD MEDIAN INCOME
 ```{r}
 #Q5 - What is the correlation between death rates and Household Median Income on a National Scale?
 #A5 - This has a considerably weak correlation. On a national level, the higher the median household income is, there becomes fewer death rates on average.
@@ -304,28 +435,96 @@ total_opiod_death_rate_income %>%
   slice(2)
 ```
 
+```{p}
+#Q6 What about Baltimore? 
+********REFER TO QUESTION 2
+```
 
-CRIME RATE
+```{p}
+#Q7 What about PG?
+
+```
+
+```{p}
+#Q8 What about the Appalachia (Knotts County,TN)?
+
+```
+
+
+
+#CRIME RATE
 ```{r}
 #Q9  - What is the crime rate in Baltimore in comparison on a National Level?
 
-#A9
+#A6 - 
 ```
 
 ```{r}
-#Q10 -  What is the crime rate in St. Louis, MO in comparison on a National Level?
+#Q10 -  What is the crime rate in PG County comapred on a national level?
+
 
 #A10-
 ```
 
+```{p}
+#Q11 - What is the crime rate in the Appalachia?
+#A11
+```
 
 
-EDUCATION
+
+#EDUCATION
 ```{r}
-#Q18 - Compared to nationally... where does Baltimore City rank in education?
+#Q12 - Compared to nationally... where does Baltimore City rank in education?
 ```
 
 ```{r}
-#Q17 Compared to nationally... where does St. Louis rank in education?
-
+#Q13 - Compared to nationally... where does PG rank in education?
+#A13 - 
 ```
+
+```{r}
+#Q14  Compared to nationally... where does Knotts Conty rank in education?
+
+
+#A14 - 
+```
+
+#POVERTY
+```{r}
+#Q15 - WHAT ARE BALTIMORE'S POVERTY LEVELS? 
+#A15 - 
+```
+
+```{r}
+#Q15 - WHAT ARE PG COUNTY'S POVERTY LEVELS? 
+#A15 - 
+```
+
+```{r}
+#Q15 - WHAT ARE KNOTTS COUNTY POVERTY LEVELS? 
+#A15 - 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
