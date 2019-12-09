@@ -326,30 +326,3 @@ census_variables %>%
 
 ```
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#DEATH RATE V. HOUSEHOLD MEDIAN INCOME
-```{r}
-#Q5 - What is the correlation between death rates and Household Median Income on a National Scale?
-#A5 - This has a considerably weak correlation. On a national level, the higher the median household income is, there becomes fewer death rates on average.
-
-total_opiod_death_rate_income %>%
-  ungroup()%>%
-  select(age_adjusted_rate, median_household_income) %>%
-  correlate() %>%
-  slice(2)
-```
